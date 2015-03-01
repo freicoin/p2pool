@@ -3,6 +3,7 @@
 ROOT=$(shell pwd)
 CACHE=${ROOT}/.cache
 PYENV=${ROOT}/.pyenv
+SYSROOT=${ROOT}/.sysroot
 CONF=${ROOT}/conf
 APP_NAME=p2pool
 
@@ -32,6 +33,7 @@ mostlyclean:
 .PHONY: clean
 clean: mostlyclean
 	-rm -rf "${PYENV}"
+	-rm -rf "${SYSROOT}"
 
 .PHONY: distclean
 distclean: clean
@@ -94,6 +96,8 @@ ${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.
 	# pip is used to install Python dependencies for this project.
 	for reqfile in "${ROOT}"/requirements.txt \
 	               "${CONF}"/requirements*.txt; do \
+	    CFLAGS="-I'${SYSROOT}'/include" \
+	    LDFLAGS="-L'${SYSROOT}'/lib" \
 	    "${PYENV}"/bin/python "${PYENV}"/bin/pip install \
 	        --download-cache="${CACHE}"/pypi \
 	        -r "$$reqfile" || exit 1; \
