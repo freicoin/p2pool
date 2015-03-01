@@ -74,7 +74,7 @@ ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz: ${CACHE}/pyenv/virtualenv-1.11.6.tar.gz
 	tar -C "${PYENV}" --gzip -cf "$@" .
 	rm -rf "${PYENV}"
 
-${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt
+${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt ${SYSROOT}/.stamp-gmp-h
 	-rm -rf "${PYENV}"
 	mkdir -p "${PYENV}"
 	mkdir -p "${CACHE}"/pypi
@@ -120,4 +120,37 @@ ${PYENV}/.stamp-h: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${CACHE}/pyenv/pyenv-
 	tar -C "${PYENV}" --gzip -xf "${CACHE}"/pyenv/pyenv-1.11.6-extras.tar.gz
 	
 	# All done!
+	touch "$@"
+
+# ===--------------------------------------------------------------------===
+
+${CACHE}/gmp/gmp-5.1.3.tar.xz:
+	mkdir -p ${CACHE}/gmp
+	curl -L 'https://ftp.gnu.org/gnu/gmp/gmp-5.1.3.tar.xz' >'$@' || { rm -f '$@'; exit 1; }
+
+${CACHE}/gmp/gmp-5.1.3-pkg.tar.gz: ${CACHE}/gmp/gmp-5.1.3.tar.xz
+	if [ -d "${SYSROOT}" ]; then \
+	    mv "${SYSROOT}" "${SYSROOT}"-bak; \
+	fi
+	mkdir -p "${SYSROOT}"
+	
+	rm -rf "${ROOT}"/.build/gmp
+	mkdir -p "${ROOT}"/.build/gmp
+	tar -C "${ROOT}"/.build/gmp --strip-components 1 --xz -xf "$<"
+	bash -c "cd '${ROOT}'/.build/gmp && ./configure --prefix '${SYSROOT}'"
+	bash -c "cd '${ROOT}'/.build/gmp && make all install"
+	rm -rf "${ROOT}"/.build/gmp
+	
+	# Snapshot the package
+	tar -C "${SYSROOT}" --gzip -cf "$@" .
+	rm -rf "${SYSROOT}"
+	if [ -d "${SYSROOT}"-bak ]; then \
+	    mv "${SYSROOT}"-bak "${SYSROOT}"; \
+	fi
+
+.PHONY: gmp-pkg
+gmp-pkg: ${SYSROOT}/.stamp-gmp-h
+${SYSROOT}/.stamp-gmp-h: ${CACHE}/gmp/gmp-5.1.3-pkg.tar.gz
+	mkdir -p "${SYSROOT}"
+	tar -C "${SYSROOT}" --gzip -xf "$<"
 	touch "$@"
