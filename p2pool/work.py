@@ -310,6 +310,7 @@ class WorkerBridge(worker_interface.WorkerBridge):
                     ]) + self.current_work.value['coinbaseflags'])[:100],
                     nonce=random.randrange(2**32),
                     pubkey_hash=pubkey_hash,
+                    budget=self.current_work.value['budget'],
                     subsidy=self.current_work.value['subsidy'],
                     donation=math.perfect_round(65535*self.donation_percentage/100),
                     stale_info=(lambda (orphans, doas), total, (orphans_recorded_in_chain, doas_recorded_in_chain):
