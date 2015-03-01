@@ -74,7 +74,7 @@ ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz: ${CACHE}/pyenv/virtualenv-1.11.6.tar.gz
 	tar -C "${PYENV}" --gzip -cf "$@" .
 	rm -rf "${PYENV}"
 
-${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h
+${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h ${SYSROOT}/.stamp-mpc-h
 	-rm -rf "${PYENV}"
 	mkdir -p "${PYENV}"
 	mkdir -p "${CACHE}"/pypi
@@ -189,5 +189,44 @@ ${CACHE}/mpfr/mpfr-3.1.2-pkg.tar.gz: ${CACHE}/mpfr/mpfr-3.1.2.tar.xz ${CACHE}/gm
 .PHONY: mpfr-pkg
 mpfr-pkg: ${SYSROOT}/.stamp-mpfr-h
 ${SYSROOT}/.stamp-mpfr-h: ${CACHE}/mpfr/mpfr-3.1.2-pkg.tar.gz ${SYSROOT}/.stamp-gmp-h
+	tar -C "${SYSROOT}" --gzip -xf "$<"
+	touch "$@"
+
+# ===--------------------------------------------------------------------===
+
+${CACHE}/mpc/mpc-1.0.1.tar.gz:
+	mkdir -p ${CACHE}/mpc
+	curl -L 'http://www.multiprecision.org/mpc/download/mpc-1.0.1.tar.gz' >'$@' || { rm -f '$@'; exit 1; }
+
+${CACHE}/mpc/mpc-1.0.1-pkg.tar.gz: ${CACHE}/mpc/mpc-1.0.1.tar.gz ${CACHE}/gmp/gmp-5.1.3-pkg.tar.gz ${CACHE}/mpfr/mpfr-3.1.2-pkg.tar.gz
+	if [ -d "${SYSROOT}" ]; then \
+	    mv "${SYSROOT}" "${SYSROOT}"-bak; \
+	fi
+	mkdir -p "${SYSROOT}"
+	tar -C "${SYSROOT}" --gzip -xf "${CACHE}"/gmp/gmp-5.1.3-pkg.tar.gz
+	tar -C "${SYSROOT}" --gzip -xf "${CACHE}"/mpfr/mpfr-3.1.2-pkg.tar.gz
+	find "${SYSROOT}" -not -type d -print0 >"${ROOT}"/.pkglist
+	
+	rm -rf "${ROOT}"/.build/mpc
+	mkdir -p "${ROOT}"/.build/mpc
+	tar -C "${ROOT}"/.build/mpc --strip-components 1 --gzip -xf "$<"
+	bash -c "cd '${ROOT}'/.build/mpc && ./configure \
+	    --prefix '${SYSROOT}' \
+	    --with-gmp='${SYSROOT}' \
+	    --with-mpfr='${SYSROOT}'"
+	bash -c "cd '${ROOT}'/.build/mpc && make all install"
+	rm -rf "${ROOT}"/.build/mpc
+	
+	# Snapshot the package
+	cat "${ROOT}"/.pkglist | xargs -0 rm -rf
+	tar -C "${SYSROOT}" --gzip -cf "$@" .
+	rm -rf "${SYSROOT}"
+	if [ -d "${SYSROOT}"-bak ]; then \
+	    mv "${SYSROOT}"-bak "${SYSROOT}"; \
+	fi
+
+.PHONY: mpc-pkg
+mpc-pkg: ${SYSROOT}/.stamp-mpc-h
+${SYSROOT}/.stamp-mpc-h: ${CACHE}/mpc/mpc-1.0.1-pkg.tar.gz ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h
 	tar -C "${SYSROOT}" --gzip -xf "$<"
 	touch "$@"
