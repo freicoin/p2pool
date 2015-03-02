@@ -92,6 +92,10 @@ class Share(object):
             ('coinbase', pack.VarStrType()),
             ('nonce', pack.IntType(32)),
             ('pubkey_hash', pack.IntType(160)),
+            ('budget', pack.ListType(pack.ComposedType([
+                ('value', pack.IntType(64)),
+                ('script', pack.VarStrType()),
+            ]))),
             ('subsidy', pack.IntType(64)),
             ('donation', pack.IntType(16)),
             ('stale_info', pack.EnumType(pack.IntType(8), dict((k, {0: None, 253: 'orphan', 254: 'doa'}.get(k, 'unk%i' % (k,))) for k in xrange(256)))),
@@ -194,8 +198,8 @@ class Share(object):
             raise ValueError()
         
         block_height = parse_bip0034(share_data['coinbase'])[0]
-        for script in share_data['budget']:
-            amounts[script['scriptPubKey']['hex'].decode('hex')] = script['value']
+        for output in share_data['budget']:
+            amounts[output['script']] = output['value']
         
         dests = sorted(amounts.iterkeys(), key=lambda script: (script == DONATION_SCRIPT, amounts[script], script))[-4000:] # block length limit, unlikely to ever be hit
         
