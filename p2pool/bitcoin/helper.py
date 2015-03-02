@@ -7,6 +7,11 @@ import p2pool
 from p2pool.bitcoin import data as bitcoin_data
 from p2pool.util import deferral, jsonrpc
 
+try:
+    from gmpy2 import mpq
+except ImportError:
+    from fractions import Fraction as mpq
+
 @deferral.retry('Error while checking Bitcoin connection:', 1)
 @defer.inlineCallbacks
 def check(bitcoind, net):
@@ -48,7 +53,7 @@ def getwork(bitcoind, use_getblocktemplate=False):
         previous_block=int(work['previousblockhash'], 16),
         transactions=map(bitcoin_data.tx_type.unpack, packed_transactions),
         transaction_hashes=map(bitcoin_data.hash256, packed_transactions),
-        transaction_fees=[x.get('fee', None) if isinstance(x, dict) else None for x in work['transactions']],
+        transaction_fees=map(lambda fee:mpq(fee) if fee is not None else fee, [x.get('fee', None) if isinstance(x, dict) else None for x in work['transactions']]),
         subsidy=work['coinbasevalue'],
         time=work['time'] if 'time' in work else work['curtime'],
         bits=bitcoin_data.FloatingIntegerType().unpack(work['bits'].decode('hex')[::-1]) if isinstance(work['bits'], (str, unicode)) else bitcoin_data.FloatingInteger(work['bits']),
