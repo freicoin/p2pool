@@ -58,7 +58,6 @@ def getwork(bitcoind, use_getblocktemplate=False):
         time=work['time'] if 'time' in work else work['curtime'],
         bits=bitcoin_data.FloatingIntegerType().unpack(work['bits'].decode('hex')[::-1]) if isinstance(work['bits'], (str, unicode)) else bitcoin_data.FloatingInteger(work['bits']),
         coinbaseflags=work['coinbaseflags'].decode('hex') if 'coinbaseflags' in work else ''.join(x.decode('hex') for x in work['coinbaseaux'].itervalues()) if 'coinbaseaux' in work else '',
-        budget=[dict(value=int(o['value']), script=o['scriptPubKey']['hex'].decode('hex')) for o in work['budget']] if 'budget' in work else [],
         height=work['height'],
         last_update=time.time(),
         use_getblocktemplate=use_getblocktemplate,

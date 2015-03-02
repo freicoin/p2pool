@@ -74,8 +74,8 @@ def load_share(share, net, peer_addr):
 DONATION_SCRIPT = '4104ffd03de44a6e11b9917f3a29f9443283d9871c9d743ef30d5eddcd37094b64d1b3d8090496b53256786bf5c82932ec23c3b74d9f05a6f95a8b5529352656664bac'.decode('hex')
 
 class Share(object):
-    VERSION = 14
-    VOTING_VERSION = 14
+    VERSION = 13
+    VOTING_VERSION = 13
     SUCCESSOR = None
     
     small_block_header_type = pack.ComposedType([
@@ -92,10 +92,6 @@ class Share(object):
             ('coinbase', pack.VarStrType()),
             ('nonce', pack.IntType(32)),
             ('pubkey_hash', pack.IntType(160)),
-            ('budget', pack.ListType(pack.ComposedType([
-                ('value', pack.IntType(64)),
-                ('script', pack.VarStrType()),
-            ]))),
             ('subsidy', pack.IntType(64)),
             ('donation', pack.IntType(16)),
             ('stale_info', pack.EnumType(pack.IntType(8), dict((k, {0: None, 253: 'orphan', 254: 'doa'}.get(k, 'unk%i' % (k,))) for k in xrange(256)))),
@@ -198,8 +194,9 @@ class Share(object):
             raise ValueError()
         
         block_height = parse_bip0034(share_data['coinbase'])[0]
-        for output in share_data['budget']:
-            amounts[output['script']] = output['value']
+        if 'FRC' in net.PARENT.SYMBOL:
+            for entry in net.PARENT.TITHE_FUNC(block_height):
+                amounts[bitcoin_data.pubkey_hash_to_script2(bitcoin_data.address_to_pubkey_hash(entry[0], net.PARENT))] = int(entry[1])
         
         dests = sorted(amounts.iterkeys(), key=lambda script: (script == DONATION_SCRIPT, amounts[script], script))[-4000:] # block length limit, unlikely to ever be hit
         

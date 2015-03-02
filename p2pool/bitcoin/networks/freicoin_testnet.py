@@ -31,3 +31,5 @@ TX_EXPLORER_URL_PREFIX = 'http://blockexplorer.com/testnet/tx/'
 SANE_TARGET_RANGE = (2**256//2**32//1000 - 1, 2**256//2**32 - 1)
 DUMB_SCRYPT_DIFF = 1
 DUST_THRESHOLD = 1e8
+
+from .freicoin import TITHE_FUNC
