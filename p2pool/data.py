@@ -74,8 +74,8 @@ def load_share(share, net, peer_addr):
 DONATION_SCRIPT = '4104ffd03de44a6e11b9917f3a29f9443283d9871c9d743ef30d5eddcd37094b64d1b3d8090496b53256786bf5c82932ec23c3b74d9f05a6f95a8b5529352656664bac'.decode('hex')
 
 class Share(object):
-    VERSION = 13
-    VOTING_VERSION = 13
+    VERSION = 14
+    VOTING_VERSION = 14
     SUCCESSOR = None
     
     small_block_header_type = pack.ComposedType([
