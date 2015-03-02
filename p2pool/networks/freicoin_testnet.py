@@ -13,6 +13,6 @@ MIN_TARGET = 0
 MAX_TARGET = 2**256//2**32 - 1
 PERSIST = False
 WORKER_PORT = 19638
-BOOTSTRAP_ADDRS = 'pool.freico.in abacus.freico.in'.split(' ')
+BOOTSTRAP_ADDRS = 'pool.freico.in abacus.freico.in pool.sicanet.net'.split(' ')
 ANNOUNCE_CHANNEL = '#p2pool-tfrc'
 VERSION_CHECK = lambda v: 50700 <= v < 60000 or 60010 <= v < 60100 or 60400 <= v
