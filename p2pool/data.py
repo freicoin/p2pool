@@ -232,7 +232,7 @@ class Share(object):
                 value=0,
                 script='\x6a\x28' + cls.get_ref_hash(net, share_info, ref_merkle_link) + pack.IntType(64).pack(last_txout_nonce),
             )],
-            lock_time=0,
+            lock_time=share_data['locktime'],
             refheight=ref_height,
         )
         
