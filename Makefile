@@ -74,7 +74,7 @@ ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz: ${CACHE}/pyenv/virtualenv-1.11.6.tar.gz
 	tar -C "${PYENV}" --gzip -cf "$@" .
 	rm -rf "${PYENV}"
 
-${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h ${SYSROOT}/.stamp-mpc-h
+${CACHE}/pyenv/pyenv-1.11.6-extras.tar.gz: ${CACHE}/pyenv/pyenv-1.11.6-base.tar.gz ${ROOT}/requirements.txt ${CONF}/requirements*.txt ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h ${SYSROOT}/.stamp-mpc-h ${SYSROOT}/.stamp-openssl-h
 	-rm -rf "${PYENV}"
 	mkdir -p "${PYENV}"
 	mkdir -p "${CACHE}"/pypi
@@ -196,7 +196,7 @@ ${SYSROOT}/.stamp-mpfr-h: ${CACHE}/mpfr/mpfr-3.1.2-pkg.tar.gz ${SYSROOT}/.stamp-
 
 ${CACHE}/mpc/mpc-1.0.1.tar.gz:
 	mkdir -p ${CACHE}/mpc
-	curl -L 'http://www.multiprecision.org/mpc/download/mpc-1.0.1.tar.gz' >'$@' || { rm -f '$@'; exit 1; }
+	curl -L 'http://ftp.gnu.org/gnu/mpc/mpc-1.0.1.tar.gz' >'$@' || { rm -f '$@'; exit 1; }
 
 ${CACHE}/mpc/mpc-1.0.1-pkg.tar.gz: ${CACHE}/mpc/mpc-1.0.1.tar.gz ${CACHE}/gmp/gmp-5.1.3-pkg.tar.gz ${CACHE}/mpfr/mpfr-3.1.2-pkg.tar.gz
 	if [ -d "${SYSROOT}" ]; then \
@@ -228,5 +228,42 @@ ${CACHE}/mpc/mpc-1.0.1-pkg.tar.gz: ${CACHE}/mpc/mpc-1.0.1.tar.gz ${CACHE}/gmp/gm
 .PHONY: mpc-pkg
 mpc-pkg: ${SYSROOT}/.stamp-mpc-h
 ${SYSROOT}/.stamp-mpc-h: ${CACHE}/mpc/mpc-1.0.1-pkg.tar.gz ${SYSROOT}/.stamp-gmp-h ${SYSROOT}/.stamp-mpfr-h
+	tar -C "${SYSROOT}" --gzip -xf "$<"
+	touch "$@"
+
+# ===--------------------------------------------------------------------===
+
+${CACHE}/openssl/openssl-1.0.2r.tar.gz:
+	mkdir -p ${CACHE}/openssl
+	curl -L 'http://www.openssl.org/source/old/1.0.2/openssl-1.0.2r.tar.gz' >'$@' || { rm -f '$@'; exit 1; }
+
+${CACHE}/openssl/openssl-1.0.2r-pkg.tar.gz: ${CACHE}/openssl/openssl-1.0.2r.tar.gz
+	if [ -d "${SYSROOT}" ]; then \
+	    mv "${SYSROOT}" "${SYSROOT}"-bak; \
+	fi
+	mkdir -p "${SYSROOT}"
+	find "${SYSROOT}" -not -type d -print0 >"${ROOT}"/.pkglist
+
+	rm -rf "${ROOT}"/.build/openssl
+	mkdir -p "${ROOT}"/.build/openssl
+	tar -C "${ROOT}"/.build/openssl --strip-components 1 --gzip -xf "$<"
+	bash -c "cd '${ROOT}'/.build/openssl && CFLAGS=-fPIC ./config \
+	    shared \
+	    --prefix='${SYSROOT}' \
+	    --openssldir='${SYSROOT}'/lib/ssl"
+	bash -c "cd '${ROOT}'/.build/openssl && make all install"
+	rm -rf "${ROOT}"/.build/openssl
+
+	# Snapshot the package
+	cat "${ROOT}"/.pkglist | xargs -0 rm -rf
+	tar -C "${SYSROOT}" --gzip -cf "$@" .
+	rm -rf "${SYSROOT}"
+	if [ -d "${SYSROOT}"-bak ]; then \
+	    mv "${SYSROOT}"-bak "${SYSROOT}"; \
+	fi
+
+.PHONY: openssl-pkg
+openssl-pkg: ${SYSROOT}/.stamp-openssl-h
+${SYSROOT}/.stamp-openssl-h: ${CACHE}/openssl/openssl-1.0.2r-pkg.tar.gz
 	tar -C "${SYSROOT}" --gzip -xf "$<"
 	touch "$@"
