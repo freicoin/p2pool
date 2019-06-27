@@ -8,6 +8,7 @@
 Makefile.local
 .cache/
 .pkglist
+.sysroot/
 .pyenv/
 .coverage
 build/

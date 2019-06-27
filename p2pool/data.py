@@ -285,6 +285,12 @@ class BaseShare(object):
             abswork=((previous_share.abswork if previous_share is not None else 0) + bitcoin_data.target_to_average_attempts(bits.target)) % 2**128,
         )
 
+        tx_version = 1
+        ref_height = 0
+        if 'FRC' in net.PARENT.SYMBOL:
+            tx_version = 2
+            ref_height = parse_bip0034(share_data['coinbase'])[0]
+
         if previous_share != None and desired_timestamp > previous_share.timestamp + 180:
             print "Warning: Previous share's timestamp is %i seconds old." % int(desired_timestamp - previous_share.timestamp)
             print "Make sure your system clock is accurate, and ensure that you're connected to decent peers."
@@ -299,7 +305,7 @@ class BaseShare(object):
             share_info['segwit_data'] = segwit_data
         
         gentx = dict(
-            version=1,
+            version=tx_version,
             tx_ins=[dict(
                 previous_output=None,
                 sequence=None,
@@ -308,7 +314,8 @@ class BaseShare(object):
             tx_outs=([dict(value=0, script='\x6a\x24\xaa\x21\xa9\xed' + pack.IntType(256).pack(witness_commitment_hash))] if segwit_activated else []) +
                 [dict(value=amounts[script], script=script) for script in dests if amounts[script] or script == DONATION_SCRIPT] +
                 [dict(value=0, script='\x6a\x28' + cls.get_ref_hash(net, share_info, ref_merkle_link) + pack.IntType(64).pack(last_txout_nonce))],
-            lock_time=0,
+            lock_time=share_data['locktime'],
+            lock_height=ref_height,
         )
         if segwit_activated:
             gentx['marker'] = 0
@@ -322,7 +329,7 @@ class BaseShare(object):
                 share_info=share_info,
                 ref_merkle_link=dict(branch=[], index=0),
                 last_txout_nonce=last_txout_nonce,
-                hash_link=prefix_to_hash_link(bitcoin_data.tx_id_type.pack(gentx)[:-32-8-4], cls.gentx_before_refhash),
+                hash_link=prefix_to_hash_link(bitcoin_data.tx_id_type.pack(gentx)[:-32-8-4-(ref_height and 4 or 0)], cls.gentx_before_refhash),
                 merkle_link=bitcoin_data.calculate_merkle_link([None] + other_transaction_hashes, 0),
             ))
             assert share.header == header # checks merkle_root
@@ -378,6 +385,10 @@ class BaseShare(object):
             raise ValueError('merkle branch too long!')
         
         assert not self.hash_link['extra_data'], repr(self.hash_link['extra_data'])
+
+        ref_height = 0
+        if 'FRC' in net.PARENT.SYMBOL:
+            ref_height = parse_bip0034(self.share_info['share_data']['coinbase'])[0]
         
         self.share_data = self.share_info['share_data']
         self.max_target = self.share_info['max_bits'].target
@@ -397,10 +408,14 @@ class BaseShare(object):
             if share_count == 0:
                 n.add(tx_count)
         assert n == set(range(len(self.share_info['new_transaction_hashes'])))
-        
+
+        suffix = pack.IntType(64).pack(self.contents['last_txout_nonce']) + pack.IntType(32).pack(0)
+        if ref_height:
+            suffix = suffix + pack.IntType(32).pack(ref_height)
+
         self.gentx_hash = check_hash_link(
             self.hash_link,
-            self.get_ref_hash(net, self.share_info, contents['ref_merkle_link']) + pack.IntType(64).pack(self.contents['last_txout_nonce']) + pack.IntType(32).pack(0),
+            self.get_ref_hash(net, self.share_info, contents['ref_merkle_link']) + suffix,
             self.gentx_before_refhash,
         )
         merkle_root = bitcoin_data.check_merkle_link(self.gentx_hash, self.share_info['segwit_data']['txid_merkle_link'] if segwit_activated else self.merkle_link)

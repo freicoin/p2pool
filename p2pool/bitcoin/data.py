@@ -117,7 +117,8 @@ tx_id_type = pack.ComposedType([
     ('version', pack.IntType(32)),
     ('tx_ins', pack.ListType(tx_in_type)),
     ('tx_outs', pack.ListType(tx_out_type)),
-    ('lock_time', pack.IntType(32))
+    ('lock_time', pack.IntType(32)),
+    ('lock_height', pack.IntType(32))
 ])
 
 class TransactionType(pack.Type):
@@ -131,7 +132,8 @@ class TransactionType(pack.Type):
     ])
     _ntx_type = pack.ComposedType([
         ('tx_outs', pack.ListType(tx_out_type)),
-        ('lock_time', _int_type)
+        ('lock_time', _int_type),
+        ('lock_height', _int_type)
     ])
     _write_type = pack.ComposedType([
         ('version', _int_type),
@@ -150,13 +152,14 @@ class TransactionType(pack.Type):
             for i in xrange(len(next['tx_ins'])):
                 witness[i] = self._witness_type.read(file)
             locktime = self._int_type.read(file)
-            return dict(version=version, marker=marker, flag=next['flag'], tx_ins=next['tx_ins'], tx_outs=next['tx_outs'], witness=witness, lock_time=locktime)
+            lockheight = self._int_type.read(file)
+            return dict(version=version, marker=marker, flag=next['flag'], tx_ins=next['tx_ins'], tx_outs=next['tx_outs'], witness=witness, lock_time=locktime, lock_height=lockheight)
         else:
             tx_ins = [None]*marker
             for i in xrange(marker):
                 tx_ins[i] = tx_in_type.read(file)
             next = self._ntx_type.read(file)
-            return dict(version=version, tx_ins=tx_ins, tx_outs=next['tx_outs'], lock_time=next['lock_time'])
+            return dict(version=version, tx_ins=tx_ins, tx_outs=next['tx_outs'], lock_time=next['lock_time'], lock_height=next['lock_height'])
     
     def write(self, file, item):
         if is_segwit_tx(item):
@@ -165,6 +168,7 @@ class TransactionType(pack.Type):
             for w in item['witness']:
                 self._witness_type.write(file, w)
             self._int_type.write(file, item['lock_time'])
+            self._int_type.write(file, item['lock_height'])
             return
         return tx_id_type.write(file, item)
 
